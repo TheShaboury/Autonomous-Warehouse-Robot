@@ -1,0 +1,9 @@
+<library path="arduino_hardware_interface">
+  <class name="arduino_hardware_interface/ArduinoSystemHardware"
+         type="arduino_hardware_interface::ArduinoSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Hardware Interface for Arduino-controlled Warehouse Robot (Differential Drive + Stepper Lift)
+    </description>
+  </class>
+</library>
