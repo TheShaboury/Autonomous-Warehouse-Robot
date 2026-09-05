@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find-pkg-share warehouse_real_bringup)/launch/launch_robot.launch.py"/>
+
+    <include file="$(find-pkg-share warehouse_real_bringup)/launch/rplidar.launch.py"/>
+
+    <include file="$(find-pkg-share warehouse_real_nav)/launch/sensor_fusion.launch.py"/>
+</launch>
