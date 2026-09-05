@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Launch localization -->
+    <include file="$(find-pkg-share warehouse_real_nav)/launch/localization_launch.py">
+        <arg name="use_sim_time" value="false"/>
+        <arg name="map" value="$(find-pkg-share warehouse_real_slam)/maps/my_home_map.yaml"/>
+    </include>
+
+    <!-- Launch navigation -->
+    <include file="$(find-pkg-share warehouse_real_nav)/launch/navigation_launch.py">
+        <arg name="use_sim_time" value="false"/>
+        <arg name="map_subscribe_transient_local" value="true"/>
+    </include>
+
+</launch>

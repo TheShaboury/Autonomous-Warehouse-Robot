@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+    <let name="rviz_config_path" 
+            value="$(find-pkg-share warehouse_real_description)/rviz/nav2_config.rviz"/>
+    
+    <!-- Launch localization -->
+    <include file="$(find-pkg-share warehouse_real_nav)/launch/localization_launch.py">
+        <arg name="use_sim_time" value="true"/>
+        <arg name="map" value="$(find-pkg-share warehouse_real_slam)/maps/sim_map_save.yaml"/>
+    </include>
+
+    <!-- Launch navigation -->
+    <include file="$(find-pkg-share warehouse_real_nav)/launch/navigation_launch.py">
+        <arg name="use_sim_time" value="true"/>
+        <arg name="map_subscribe_transient_local" value="true"/>
+    </include>
+
+    <!-- Run RViz -->
+    <node pkg="rviz2" exec="rviz2" output="screen" args="-d $(var rviz_config_path)"/>
+
+</launch>

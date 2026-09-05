@@ -1,0 +1,256 @@
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    alpha1: 0.6
+    alpha2: 0.6
+    alpha3: 0.8
+    alpha4: 0.8
+    base_frame_id: "base_link"
+    global_frame_id: "map"
+    odom_frame_id: "odom"
+    scan_topic: scan
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    tf_broadcast: true
+    min_particles: 600       # Adjusted to save Nano CPU
+    max_particles: 3000      # Adjusted to save Nano CPU
+    z_hit: 0.9
+    z_short: 0.02
+    z_max: 0.03
+    z_rand: 0.05
+    sigma_hit: 0.12
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 6.0     # Matches your RPLidar A1 realistic range
+    laser_min_range: 0.15
+    laser_model_type: "likelihood_field"
+    transform_tolerance: 0.5
+    max_beams: 90            # Reduced from 180 to save CPU
+    update_min_d: 0.1
+    update_min_a: 0.1
+ 
+bt_navigator:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 1000
+    navigators:
+    - navigate_to_pose
+    - navigate_through_poses
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+
+controller_server:
+  ros__parameters:
+    use_sim_time: false
+    controller_frequency: 15.0
+    odom_topic: /odom
+    odom_duration: 0.3
+    costmap_update_timeout: 2.0
+    min_x_velocity_threshold: 0.01
+    min_y_velocity_threshold: 0.01
+    min_theta_velocity_threshold: 0.01
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.10
+      movement_time_allowance: 8.0
+
+    general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.35
+
+    # ── THE MAGIC: Regulated Pure Pursuit (Fast & CPU-Friendly) ──
+    FollowPath:
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 0.20
+      lookahead_dist: 0.65
+      min_lookahead_dist: 0.45
+      max_lookahead_dist: 0.85
+      lookahead_time: 1.5
+      use_velocity_scaled_lookahead_dist: false
+      transform_tolerance: 0.5
+      min_approach_linear_velocity: 0.08
+      approach_velocity_scaling_dist: 0.6
+      use_collision_detection: true
+      max_allowed_time_to_collision_up_to_carrot: 1.2
+      use_regulated_linear_velocity_scaling: true
+      use_cost_regulated_linear_velocity_scaling: true
+      cost_scaling_dist: 0.35
+      cost_scaling_gain: 0.8
+      regulated_linear_scaling_min_radius: 0.9
+      regulated_linear_scaling_min_speed: 0.08
+      max_robot_pose_search_dist: 10.0
+      use_interpolation: true
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.4
+      rotate_to_heading_angular_vel: 0.4  # Slower rotation for 150kg safety
+      max_angular_accel: 0.8
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: false
+      update_frequency: 5.0    # Reduced from 10 to save CPU
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 4
+      height: 4
+      resolution: 0.05
+      # ── OUR PHYSICS: Exact Polygon Footprint ──
+      footprint: "[[0.48, 0.36], [0.48, -0.36], [-0.48, -0.36], [-0.48, 0.36]]"
+      transform_tolerance: 0.5
+      
+      plugins: ["voxel_layer", "inflation_layer"]
+
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: False
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 4.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.5
+          obstacle_min_range: 0.05
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # ── OUR CORRIDOR MATH ──
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.85
+        inflate_unknown: false
+        inflate_around_unknown: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: false
+      update_frequency: 2.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      # ── OUR PHYSICS: Exact Polygon Footprint ──
+      footprint: "[[0.48, 0.36], [0.48, -0.36], [-0.48, -0.36], [-0.48, 0.36]]"
+      resolution: 0.05
+      track_unknown_space: true
+      transform_tolerance: 0.5
+      
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 4.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.5
+          obstacle_min_range: 0.25
+
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.85
+        inflate_unknown: false
+        inflate_around_unknown: false
+
+planner_server:
+  ros__parameters:
+    use_sim_time: false
+    expected_planner_frequency: 5.0
+    planner_plugins: ["GridBased"]
+
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.25
+      downsample_costmap: false
+      allow_unknown: false
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 1.5
+      cost_travel_multiplier: 1.2
+      use_final_approach_orientation: false
+
+recoveries_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 0.4    # Safe spin speed for 150kg
+    min_rotational_vel: 0.1
+    rotational_acc_lim: 1.5    # Respect the heavy inertia
+
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: false
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    odom_topic: "/odom"
+    odom_duration: 0.1
+    velocity_timeout: 1.0
+    
+    max_velocity: [0.25, 0.0, 0.5]
+    min_velocity: [-0.15, 0.0, -0.5]   # Capped reverse speed for safety
+    max_accel: [0.45, 0.0, 0.5]        # Smooth acceleration prevents slip
+    min_accel: [-0.3, 0.0, -0.5]
+    max_decel: [-0.45, 0.0, -0.9]
+    deadband_velocity: [0.07, 0.0, 0.08]
+
+map_server:
+  ros__parameters:
+    use_sim_time: false
+    yaml_filename: "/home/ros/ros2_ws/src/warehouse_real_slam/maps/my_home_map.yaml"
