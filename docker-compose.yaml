@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  robot_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my_robot_image:latest
+    container_name: ros2_humble_robot
+    # Network host is required for ROS 2 communication (DDS)
+    network_mode: host
+    ipc: host
+    pid: host
+    
+    # Environment variables for GUI (Gazebo/RViz)
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - TERM=xterm-256color
+      # Force software rendering if hardware acceleration fails (Fixes the crash)
+      - LIBGL_ALWAYS_SOFTWARE=1 
+      - MESA_GL_VERSION_OVERRIDE=3.3
+    
+    # Volumes: Map X11 for GUI and your src folder for code
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./src:/home/ros/ros2_ws/src
+      # Map the sound device to remove ALSA errors (Optional)
+      - /run/user/1000/pulse:/run/user/1000/pulse
+
+    # Devices: Give access to Arduino and Graphics Card
+    devices:
+      # Arduino (Check if it is USB0 or ACM0)
+      # - /dev/ttyUSB0:/dev/ttyUSB0 
+      # Access to graphics card for rendering
+      - /dev/dri:/dev/dri
+      # - /dev/ttyUSB0:/dev/ttyUSB0
+      # - /dev/ttyACM0:/dev/ttyACM0
+
+    # Keep the container running so you can attach to it
+    command: sleep infinity
+
+    # Fixes for interactive shell
+    stdin_open: true 
+    tty: true

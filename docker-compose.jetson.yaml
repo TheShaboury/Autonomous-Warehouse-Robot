@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  robot_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.jetson
+    image: real_robot_jetson:latest
+    container_name: ros2_real_robot
+    # Network host is required for ROS 2 communication (DDS)
+    network_mode: host
+    ipc: host
+    pid: host
+    restart: unless-stopped
+    
+    # Privileged is required for accessing hardware interfaces as USB, GPIO, etc.
+    privileged: true
+
+    # Environment Variables for ROS 2 and udev management
+    environment:
+      - ROS_DOMAIN_ID=0
+      - UDEV=1 # Enable udev inside container for device management as USB
+    
+    # Volumes: Map X11 for GUI and your src folder for code
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./src:/home/ros/ros2_ws/src
+      - /dev:/dev # Map /dev to access hardware devices
+      - /etc/localtime:/etc/localtime:ro  # Sync time with host
+      # Map the sound device to remove ALSA errors (Optional)
+      - /run/user/1000/pulse:/run/user/1000/pulse
+
+    # Keep the container running so you can attach to it
+    command: sleep infinity
+
+    # Fixes for interactive shell
+    stdin_open: true 
+    tty: true
